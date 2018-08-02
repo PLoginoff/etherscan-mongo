@@ -11,7 +11,14 @@ $address = '0xc2807533832807Bf15898778D8A108405e9edfb1';
 /*
 $client = new Etherscan('empty');
 
-$list   = $client->transactionList($address,0, 1E9, 'desc', 1, 20000);
+$page0 = $client->transactionList($address,0, 1E9, 'desc', 1, 10000);
+$page1 = $client->transactionList($address,0, 1E9, 'desc', 2, 10000);
+
+$all = array_merge($page0['result'], $page1['result']);
+
+echo json_encode($all, JSON_PRETTY_PRINT);
+
+//echo count($list['result']);
 
     [blockNumber] => 5669428
     [timeStamp] => 1527176540
@@ -32,14 +39,21 @@ $list   = $client->transactionList($address,0, 1E9, 'desc', 1, 20000);
     [gasUsed] => 22618
     [confirmations] => 405383
 
-echo json_encode($list, JSON_PRETTY_PRINT);
-
+    echo json_encode($list, JSON_PRETTY_PRINT);
 */
 
 $result = [];
-foreach (json_decode(file_get_contents('collect.json'), true)['result'] as $t) {
+$count   = 0;
+foreach (json_decode(file_get_contents('collect.json'), true) as $t) {
     $date = date('Y-m-d', $t['timeStamp']);
     // $result[$date]
+
+    if ($t['isError']) {
+        continue;
+    }
+
+    $count++;
+
     if (strstr($t['input'], '0xa9059cbb') === false) {
         continue;
     }
@@ -48,15 +62,17 @@ foreach (json_decode(file_get_contents('collect.json'), true)['result'] as $t) {
     $input = (int) round(hexdec(trim(substr($t['input'], -32), '0')) / 1E8);
 
     if (empty($result[$date])) {
-        $result[$date] = 0;
+        $result[$date] = ['input' => 0, 'count' => 0];
     }
 
-    $result[$date] += $input;
+    $result[$date]['input'] += $input;
+    $result[$date]['count'] += 1;
 }
 
 ksort($result);
 
 foreach ($result as $i => $v) {
-    echo "$i\t$v\n";
+    echo "$i\t" . $v['count'] . "\t" . $v['input'] . "\n";
 }
 
+echo "total: $count\n";
